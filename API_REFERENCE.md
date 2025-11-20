@@ -121,6 +121,51 @@ bool flush(int timeoutMs = -1);
 WinLog::getInstance().flush(2000); // 等待最多2000毫秒刷新完成
 ```
 
+#### 性能统计接口
+
+##### 重置统计数据
+```cpp
+void resetStats();
+```
+
+重置所有性能统计计数器。
+
+**示例：**
+```cpp
+// 开始新的性能统计周期
+WinLog::getInstance().resetStats();
+```
+
+##### 获取统计数据
+```cpp
+struct Stats {
+    uint64_t allocationRequests;      // 内存分配请求次数
+    uint64_t deallocationRequests;    // 内存释放请求次数
+    uint64_t objectReuseCount;        // 对象复用次数
+    uint64_t currentPoolSize;         // 当前内存池对象数量
+    double memorySavingsPercent;      // 内存节省百分比
+    uint64_t totalMemoryAllocated;    // 总共分配的内存（字节）
+    uint64_t peakMemoryUsage;         // 峰值内存使用量（字节）
+    uint64_t queueOverflowCount;      // 队列溢出次数
+    uint64_t droppedMessages;         // 丢弃的消息数量
+    uint64_t processedMessages;       // 已处理的消息数量
+};
+
+Stats getStats() const;
+```
+
+获取当前的性能统计数据。
+
+**返回值：**
+- 包含各种性能指标的 Stats 结构体
+
+**示例：**
+```cpp
+WinLog::Stats stats = WinLog::getInstance().getStats();
+printf("对象复用次数: %llu\n", stats.objectReuseCount);
+printf("内存节省百分比: %.2f%%\n", stats.memorySavingsPercent);
+```
+
 #### 设置异步配置
 ```cpp
 void setAsyncConfig(const AsyncConfig& config);

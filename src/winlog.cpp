@@ -254,6 +254,34 @@ public:
         return asyncMode;
     }
     
+    void resetStats() {
+        if (asyncMode && asyncQueue) {
+            asyncQueue->resetStats();
+        }
+    }
+    
+    Stats getStats() const {
+        if (asyncMode && asyncQueue) {
+            // 获取AsyncLogQueue内部的统计数据
+            auto queueStats = asyncQueue->getStats();
+            
+            // 转换为全局Stats类型
+            Stats result;
+            result.totalLogEntries = queueStats.totalEnqueued;
+            result.droppedEntries = queueStats.totalDropped;
+            // 注意：AsyncLogQueue::Stats没有totalOverflows字段
+            result.totalAllocations = queueStats.totalAllocations;
+            result.totalDeallocations = queueStats.totalDeallocations;
+            result.peakPoolSize = queueStats.peakPoolSize;
+            result.currentPoolSize = queueStats.currentPoolSize;
+            result.threadCacheHits = queueStats.tlsCacheHits;
+            // 注意：AsyncLogQueue::Stats没有tlsCacheMisses和batchOperations字段
+            
+            return result;
+        }
+        return Stats(); // 返回默认统计数据
+    }
+    
 private:
     LogLevel logLevel;
     std::ofstream* fileStream;
@@ -387,6 +415,14 @@ AsyncConfig WinLog::getAsyncConfig() const {
 
 bool WinLog::isAsyncModeEnabled() const {
     return pImpl->isAsyncModeEnabled();
+}
+
+void WinLog::resetStats() {
+    pImpl->resetStats();
+}
+
+Stats WinLog::getStats() const {
+    return pImpl->getStats();
 }
 
 void WinLog::trace(const char* format, ...) {

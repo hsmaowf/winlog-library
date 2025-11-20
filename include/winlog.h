@@ -84,6 +84,32 @@ struct WINLOG_API LogEntry {
     }
 };
 
+// 统计信息结构体
+struct WINLOG_API Stats {
+    size_t totalLogEntries;       // 总日志条目数
+    size_t droppedEntries;        // 丢弃的条目数
+    size_t queueOverflows;        // 队列溢出次数
+    size_t totalAllocations;      // 总内存分配次数
+    size_t totalDeallocations;    // 总内存释放次数
+    size_t peakPoolSize;          // 峰值内存池大小
+    size_t currentPoolSize;       // 当前内存池大小
+    size_t threadCacheHits;       // 线程缓存命中次数
+    size_t threadCacheMisses;     // 线程缓存未命中次数
+    size_t batchOperations;       // 批量操作次数
+    
+    Stats() : 
+        totalLogEntries(0),
+        droppedEntries(0),
+        queueOverflows(0),
+        totalAllocations(0),
+        totalDeallocations(0),
+        peakPoolSize(0),
+        currentPoolSize(0),
+        threadCacheHits(0),
+        threadCacheMisses(0),
+        batchOperations(0) {}
+};
+
 // 异步配置结构体
 struct WINLOG_API AsyncConfig {
     bool enabled;                 // 是否启用异步模式
@@ -144,6 +170,10 @@ public:
     
     // 判断是否使用异步模式
     bool isAsyncModeEnabled() const;
+    
+    // 统计相关接口
+    void resetStats();
+    Stats getStats() const;
     
     // 版本管理接口
     static int getVersionMajor();
