@@ -18,8 +18,15 @@ static WinLog& WinLog::getInstance();
 获取 WinLog 单例实例，所有操作都通过此实例进行。
 
 #### 初始化
+
+**基本初始化（同步模式）**
 ```cpp
 bool init(const char* logFilePath = nullptr, LogLevel level = LogLevel::info);
+```
+
+**异步模式初始化**
+```cpp
+bool init(const char* logFilePath, LogLevel level, const AsyncConfig& asyncConfig);
 ```
 
 初始化日志库。
@@ -27,6 +34,7 @@ bool init(const char* logFilePath = nullptr, LogLevel level = LogLevel::info);
 **参数：**
 - `logFilePath`：日志文件路径，如果为 `nullptr` 则不写入文件
 - `level`：日志级别，默认为 `LogLevel::info`
+- `asyncConfig`：异步日志配置结构体
 
 **返回值：**
 - `true`：初始化成功
@@ -34,7 +42,15 @@ bool init(const char* logFilePath = nullptr, LogLevel level = LogLevel::info);
 
 **示例：**
 ```cpp
+// 基本同步模式初始化
 WinLog::getInstance().init("app.log", LogLevel::debug);
+
+// 异步模式初始化
+AsyncConfig config;
+config.enabled = true;
+config.queueSize = 5000;
+config.flushIntervalMs = 500;
+WinLog::getInstance().init("app.log", LogLevel::info, config);
 ```
 
 #### 日志记录方法
@@ -85,6 +101,65 @@ void shutdown();
 ```cpp
 WinLog::getInstance().shutdown();
 ```
+
+#### 刷新日志缓冲区
+```cpp
+bool flush(int timeoutMs = -1);
+```
+
+立即写入所有待处理的日志到文件。在异步模式下特别有用。
+
+**参数：**
+- `timeoutMs`：超时时间（毫秒），-1 表示无限等待
+
+**返回值：**
+- `true`：刷新成功
+- `false`：刷新失败或超时
+
+**示例：**
+```cpp
+WinLog::getInstance().flush(2000); // 等待最多2000毫秒刷新完成
+```
+
+#### 设置异步配置
+```cpp
+void setAsyncConfig(const AsyncConfig& config);
+```
+
+设置异步日志的配置参数。注意：必须在 `init()` 之前调用。
+
+**参数：**
+- `config`：异步日志配置结构体
+
+**示例：**
+```cpp
+AsyncConfig config;
+config.queueSize = 10000;
+config.flushIntervalMs = 1000;
+WinLog::getInstance().setAsyncConfig(config);
+WinLog::getInstance().init("app.log", LogLevel::info);
+```
+
+#### 获取当前异步配置
+```cpp
+AsyncConfig getAsyncConfig() const;
+```
+
+获取当前的异步日志配置。
+
+**返回值：**
+- 当前的异步日志配置结构体
+
+#### 判断是否使用异步模式
+```cpp
+bool isAsyncModeEnabled() const;
+```
+
+判断当前是否启用了异步日志模式。
+
+**返回值：**
+- `true`：已启用异步模式
+- `false`：使用同步模式
 
 #### 版本管理接口
 

@@ -275,18 +275,80 @@ private:
 - **缓冲刷新策略**：基于时间和数量的双触发机制
 - **异步I/O**：考虑使用Windows的异步I/O API
 
-## ⚙️ 配置参数
+## ⚙️ 异步配置参数
 
-| 参数 | 类型 | 默认值 | 描述 |
-|------|------|--------|------|
-| queueSize | size_t | 10000 | 异步队列最大容量 |
-| asyncEnabled | bool | true | 是否启用异步模式 |
-| flushIntervalMs | int | 1000 | 自动刷新间隔(毫秒) |
-| maxBatchSize | size_t | 100 | 最大批量处理大小 |
-| memoryPoolSize | size_t | 1000 | 内存池初始大小 |
-| maxMemoryPoolSize | size_t | 10000 | 内存池最大大小 |
-| dropOnOverflow | bool | false | 队列满时是否丢弃日志 |
-| workerPriority | int | 0 | 工作线程优先级 |
+WinLog的AsyncConfig结构体定义如下：
+
+```cpp
+struct AsyncConfig {
+    // 是否启用异步模式，默认为 false
+    bool enabled = false;
+    
+    // 异步队列大小，默认为 5000
+    size_t queueSize = 5000;
+    
+    // 刷新间隔（毫秒），默认为 500
+    unsigned int flushIntervalMs = 500;
+    
+    // 工作线程优先级
+    int workerThreadPriority = 0;
+    
+    // 单个日志条目的最大大小（字节）
+    size_t maxLogEntrySize = 4096;
+};
+```
+
+## 🔧 异步日志初始化与配置
+
+### 初始化方式
+
+**直接使用异步配置初始化**
+```cpp
+AsyncConfig config;
+config.enabled = true;
+config.queueSize = 5000;
+config.flushIntervalMs = 500;
+WinLog::getInstance().init("application.log", LogLevel::info, config);
+```
+
+**先设置配置再初始化**
+```cpp
+AsyncConfig config;
+config.enabled = true;
+config.queueSize = 10000;
+config.flushIntervalMs = 1000;
+WinLog::getInstance().setAsyncConfig(config);
+WinLog::getInstance().init("application.log", LogLevel::info);
+```
+
+### 关键API接口
+
+| 接口名 | 说明 | 参数 | 返回值 |
+|--------|------|------|--------|
+| init("logfile.log", level, config) | 使用异步配置初始化日志库 | 日志文件路径、日志级别、异步配置结构体 | bool（初始化是否成功） |
+| setAsyncConfig(config) | 设置异步日志配置，必须在init之前调用 | 异步配置结构体 | void |
+| getAsyncConfig() | 获取当前的异步配置 | 无 | AsyncConfig结构体 |
+| isAsyncModeEnabled() | 检查是否启用了异步模式 | 无 | bool |
+| flush(timeoutMs) | 立即刷新所有待处理的日志 | 超时时间（毫秒） | bool（刷新是否成功） |
+
+### 最佳实践
+
+1. **程序退出前调用flush确保日志完整写入**
+   ```cpp
+   WinLog::getInstance().flush();
+   WinLog::getInstance().shutdown();
+   ```
+
+2. **合理设置队列大小和刷新间隔**
+   - 高频率日志场景：队列大小10000+，刷新间隔200-300ms
+   - 常规场景：队列大小5000，刷新间隔500-1000ms
+
+3. **检查异步模式是否成功启用**
+   ```cpp
+   if (WinLog::getInstance().isAsyncModeEnabled()) {
+       WinLog::getInstance().info("异步日志模式已启用");
+   }
+   ```
 
 ## 📊 预期性能提升
 

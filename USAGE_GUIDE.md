@@ -20,11 +20,29 @@
 ### 步骤 2：初始化日志库
 
 ```cpp
-// 初始化，日志写入文件和控制台
-WinLog::getInstance().init("myapp.log", LogLevel::info);
+// 基本初始化，只输出到控制台
+WinLog::getInstance().init();
 
-// 或者只输出到控制台（不写入文件）
-WinLog::getInstance().init(nullptr, LogLevel::debug);
+// 输出到文件和控制台
+WinLog::getInstance().init("application.log");
+
+// 设置日志级别为DEBUG
+WinLog::getInstance().init("application.log", LogLevel::debug);
+
+// 异步日志初始化
+AsyncConfig config;
+config.enabled = true;
+config.queueSize = 5000;
+config.flushIntervalMs = 500;
+WinLog::getInstance().init("application.log", LogLevel::info, config);
+
+// 或者先设置配置，再初始化
+AsyncConfig config2;
+config2.enabled = true;
+config2.queueSize = 10000;
+config2.flushIntervalMs = 1000;
+WinLog::getInstance().setAsyncConfig(config2);
+WinLog::getInstance().init("application.log", LogLevel::info);
 ```
 
 ### 步骤 3：记录日志
@@ -32,9 +50,6 @@ WinLog::getInstance().init(nullptr, LogLevel::debug);
 ```cpp
 // 使用类方法
 WinLog::getInstance().info("程序启动成功");
-
-// 使用全局函数
-logInfo("程序启动成功");
 ```
 
 ### 步骤 4：关闭日志库
@@ -98,11 +113,14 @@ WinLog::getInstance().error("数据库连接失败：%s", errorMsg);
 WinLog::getInstance().init("app.log", LogLevel::info);
 
 // 调试时临时切换到 DEBUG 级别
-WinLog::getInstance().setLevel(LogLevel::debug);
-logDebug("调试信息：变量 x = %d", x);
+WinLog::getInstance().setLogLevel(LogLevel::debug);
+WinLog::getInstance().debug("调试信息：变量 x = %d", x);
+
+// 获取当前日志级别
+LogLevel currentLevel = WinLog::getInstance().getLogLevel();
 
 // 调试完成后恢复 INFO 级别
-WinLog::getInstance().setLevel(LogLevel::info);
+WinLog::getInstance().setLogLevel(LogLevel::info);
 ```
 
 ### 条件日志记录
@@ -110,13 +128,13 @@ WinLog::getInstance().setLevel(LogLevel::info);
 ```cpp
 // 只在调试模式下记录详细日志
 #ifdef DEBUG_MODE
-    logTrace("进入函数：%s", __FUNCTION__);
-    logDebug("参数值：%d", param);
+    WinLog::getInstance().trace("进入函数：%s", __FUNCTION__);
+    WinLog::getInstance().debug("参数值：%d", param);
 #endif
 
 // 根据日志级别记录不同详细程度的信息
 if (logLevel <= LogLevel::debug) {
-    logDebug("详细调试信息：%s", detailedInfo);
+    WinLog::getInstance().debug("详细调试信息：%s", detailedInfo);
 }
 ```
 
@@ -127,9 +145,9 @@ try {
     // 可能抛出异常的代码
     riskyOperation();
 } catch (const std::exception& e) {
-    logError("捕获异常：%s", e.what());
+    WinLog::getInstance().error("捕获异常：%s", e.what());
 } catch (...) {
-    logCritical("捕获未知异常");
+    WinLog::getInstance().critical("捕获未知异常");
 }
 ```
 
@@ -144,7 +162,7 @@ performOperation();
 auto end = std::chrono::high_resolution_clock::now();
 auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-logInfo("操作完成，耗时：%lld 毫秒", duration.count());
+WinLog::getInstance().info("操作完成，耗时：%lld 毫秒", duration.count());
 ```
 
 ## 🎯 最佳实践
@@ -153,51 +171,51 @@ logInfo("操作完成，耗时：%lld 毫秒", duration.count());
 
 ```cpp
 // ✅ 好的做法：清晰描述事件
-logInfo("用户登录成功 - 用户ID: %d", userId);
-logWarn("API调用频率过高 - 接口: %s, 次数: %d", apiName, callCount);
+WinLog::getInstance().info("用户登录成功 - 用户ID: %d", userId);
+WinLog::getInstance().warn("API调用频率过高 - 接口: %s, 次数: %d", apiName, callCount);
 
 // ❌ 避免：过于简单或模糊
-logInfo("OK");
-logWarn("Something happened");
+WinLog::getInstance().info("OK");
+WinLog::getInstance().warn("Something happened");
 ```
 
 ### 2. 错误日志详细程度
 
 ```cpp
 // ✅ 好的做法：包含足够的上下文信息
-logError("数据库查询失败 - 表: %s, 错误: %s, SQL: %s", 
+WinLog::getInstance().error("数据库查询失败 - 表: %s, 错误: %s, SQL: %s", 
          tableName, mysql_error(conn), sqlQuery);
 
 // ❌ 避免：信息不足
-logError("Database error");
+WinLog::getInstance().error("Database error");
 ```
 
 ### 3. 日志级别选择
 
 ```cpp
 // TRACE: 详细的执行路径
-logTrace("进入函数: processData()");
-logTrace("循环开始，迭代次数: %d", iterations);
+WinLog::getInstance().trace("进入函数: processData()");
+WinLog::getInstance().trace("循环开始，迭代次数: %d", iterations);
 
 // DEBUG: 调试信息
-logDebug("变量状态 - x: %d, y: %d", x, y);
-logDebug("缓存命中率: %.2f%%", hitRate);
+WinLog::getInstance().debug("变量状态 - x: %d, y: %d", x, y);
+WinLog::getInstance().debug("缓存命中率: %.2f%%", hitRate);
 
 // INFO: 重要事件
-logInfo("服务启动完成 - 端口: %d", port);
-logInfo("用户注册成功 - 邮箱: %s", email);
+WinLog::getInstance().info("服务启动完成 - 端口: %d", port);
+WinLog::getInstance().info("用户注册成功 - 邮箱: %s", email);
 
 // WARN: 警告但不影响继续执行
-logWarn("配置文件缺失，使用默认值");
-logWarn("API响应时间过长: %d ms", responseTime);
+WinLog::getInstance().warn("配置文件缺失，使用默认值");
+WinLog::getInstance().warn("API响应时间过长: %d ms", responseTime);
 
 // ERROR: 错误但程序可继续
-logError("文件读取失败: %s", filename);
-logError("网络连接超时 - 主机: %s", hostname);
+WinLog::getInstance().error("文件读取失败: %s", filename);
+WinLog::getInstance().error("网络连接超时 - 主机: %s", hostname);
 
 // CRITICAL: 严重错误，可能导致程序终止
-logCritical("数据库连接池耗尽");
-logCritical("系统内存不足");
+WinLog::getInstance().critical("数据库连接池耗尽");
+WinLog::getInstance().critical("系统内存不足");
 ```
 
 ### 4. 资源管理
@@ -210,12 +228,12 @@ public:
         if (!WinLog::getInstance().init("app.log", LogLevel::info)) {
             return false;
         }
-        logInfo("应用程序初始化成功");
+        WinLog::getInstance().info("应用程序初始化成功");
         return true;
     }
     
     void cleanup() {
-        logInfo("应用程序关闭中...");
+        WinLog::getInstance().info("应用程序关闭中...");
         WinLog::getInstance().shutdown();
     }
     
@@ -256,7 +274,7 @@ SetConsoleOutputCP(CP_UTF8);
 SetConsoleCP(CP_UTF8);
 
 // 现在可以正常显示中文
-logInfo("中文日志消息测试");
+WinLog::getInstance().info("中文日志消息测试");
 ```
 
 ### Q3: 日志文件过大？
@@ -296,7 +314,7 @@ WinLog 内部已经实现了线程安全机制，无需额外处理。每个日�
 void logUserAction(const std::string& userId, const std::string& action) {
     // 记录用户ID的哈希值而不是明文
     std::size_t hash = std::hash<std::string>{}(userId);
-    logInfo("用户操作 - 用户哈希: %zu, 操作: %s", hash, action.c_str());
+    WinLog::getInstance().info("用户操作 - 用户哈希: %zu, 操作: %s", hash, action.c_str());
 }
 
 // 使用包装函数
@@ -309,12 +327,14 @@ logUserAction("user123", "登录");
 
 ```cpp
 // ✅ 好的做法：先检查日志级别
-if (logLevel <= LogLevel::debug) {
-    logDebug("详细调试信息：%s", expensiveOperation());
+if (WinLog::getInstance().getLogLevel() <= LogLevel::debug) {
+    // 只有在调试级别时才构建复杂的日志消息
+    std::string complexMessage = "复杂的调试信息：" + someVariable;
+    WinLog::getInstance().debug(complexMessage);
 }
 
 // ❌ 避免：总是调用，即使不会输出
-logDebug("详细调试信息：%s", expensiveOperation());
+WinLog::getInstance().debug("详细调试信息：%s", expensiveOperation());
 ```
 
 ### 2. 批量日志记录
@@ -329,62 +349,37 @@ for (const auto& item : items) {
 }
 
 // 一次性输出
-for (const auto& msg : logMessages) {
-    logInfo("%s", msg.c_str());
-}
+    for (const auto& msg : logMessages) {
+        WinLog::getInstance().info("%s", msg.c_str());
+    }
 ```
 
 ### 3. 异步日志（高级）
 
 ```cpp
-// 使用队列实现异步日志
-#include <queue>
-#include <thread>
-#include <condition_variable>
+// 使用WinLog内置的异步日志功能
+AsyncConfig config;
+config.enabled = true;
+config.queueSize = 10000;  // 较大的队列大小
+config.flushIntervalMs = 1000;  // 适当的刷新间隔
+WinLog::getInstance().init("high_freq.log", LogLevel::info, config);
 
-class AsyncLogger {
-private:
-    std::queue<std::string> logQueue;
-    std::mutex queueMutex;
-    std::condition_variable cv;
-    std::thread workerThread;
-    bool running;
-    
-public:
-    AsyncLogger() : running(true) {
-        workerThread = std::thread([this]() {
-            while (running) {
-                std::unique_lock<std::mutex> lock(queueMutex);
-                cv.wait(lock, [this] { return !logQueue.empty() || !running; });
-                
-                while (!logQueue.empty()) {
-                    std::string msg = logQueue.front();
-                    logQueue.pop();
-                    lock.unlock();
-                    
-                    logInfo("%s", msg.c_str());
-                    
-                    lock.lock();
-                }
-            }
-        });
-    }
-    
-    ~AsyncLogger() {
-        {
-            std::lock_guard<std::mutex> lock(queueMutex);
-            running = false;
-        }
-        cv.notify_all();
-        workerThread.join();
-    }
-    
-    void logAsync(const std::string& message) {
-        std::lock_guard<std::mutex> lock(queueMutex);
-        logQueue.push(message);
-        cv.notify_one();
-    }
-};
+// 检查是否使用异步模式
+if (WinLog::getInstance().isAsyncModeEnabled()) {
+    WinLog::getInstance().info("当前使用异步日志模式");
+}
+
+// 获取异步配置
+AsyncConfig currentConfig = WinLog::getInstance().getAsyncConfig();
+WinLog::getInstance().info("异步队列大小: %d", currentConfig.queueSize);
+
+// 立即刷新日志缓冲区（在程序退出前很有用）
+WinLog::getInstance().flush(2000); // 等待最多2000毫秒
+
+// 注意：使用异步日志时，在程序退出前最好调用flush确保所有日志都写入
+// 在程序退出前调用
+WinLog::getInstance().flush(); // 无限等待直到所有日志写入完成
+WinLog::getInstance().shutdown(); // 关闭日志库
 ```
 
 ## 📋 日志格式建议
@@ -417,9 +412,9 @@ void logStructured(LogLevel level, const std::string& event,
     json << "}}";
     
     switch (level) {
-        case LogLevel::info: logInfo("%s", json.str().c_str()); break;
-        case LogLevel::warn: logWarn("%s", json.str().c_str()); break;
-        case LogLevel::error: logError("%s", json.str().c_str()); break;
+        case LogLevel::info: WinLog::getInstance().info("%s", json.str().c_str()); break;
+        case LogLevel::warn: WinLog::getInstance().warn("%s", json.str().c_str()); break;
+        case LogLevel::error: WinLog::getInstance().error("%s", json.str().c_str()); break;
         default: break;
     }
 }

@@ -5,9 +5,9 @@
 #include <iomanip>
 #include "../include/winlog.h"
 
-// 测试基本的异步日志功能
+// Test basic asynchronous logging functionality
 void testBasicAsyncLogging() {
-    std::cout << "=== 测试基本异步日志功能 ===" << std::endl;
+    std::cout << "=== Testing Basic Async Logging Functionality ===" << std::endl;
     
     // 设置异步配置
     AsyncConfig config;
@@ -20,18 +20,20 @@ void testBasicAsyncLogging() {
     WinLog::getInstance().setAsyncConfig(config);
     
     // 初始化异步日志
-    if (WinLog::getInstance().init(nullptr, LogLevel::info, config)) {
-        std::cout << "异步日志初始化成功" << std::endl;
+    if (WinLog::getInstance().init("async_log.log", LogLevel::info, config)) {
+        std::cout << "Async logging initialized successfully" << std::endl;
+        WinLog::getInstance().info("Async logging initialized successfully");
     } else {
-        std::cout << "异步日志初始化失败" << std::endl;
+        std::cout << "Failed to initialize async logging" << std::endl;
+        WinLog::getInstance().info("Failed to initialize async logging");
         return;
     }
     
-    // 记录不同级别的日志
-    WinLog::getInstance().info("这是一条异步INFO日志");
-    WinLog::getInstance().debug("这是一条异步DEBUG日志");
-    WinLog::getInstance().warn("这是一条异步WARNING日志");
-    WinLog::getInstance().error("这是一条异步ERROR日志");
+    // Log different levels of messages
+    WinLog::getInstance().info("This is an asynchronous INFO log");
+    WinLog::getInstance().debug("This is an asynchronous DEBUG log");
+    WinLog::getInstance().warn("This is an asynchronous WARNING log");
+    WinLog::getInstance().error("This is an asynchronous ERROR log");
     
     // 刷新日志，确保所有日志都被处理
     WinLog::getInstance().flush();
@@ -39,22 +41,22 @@ void testBasicAsyncLogging() {
     // 等待一段时间，确保日志被写入
     std::this_thread::sleep_for(std::chrono::seconds(1));
     
-    std::cout << "基本异步日志测试完成" << std::endl;
+    std::cout << "Basic asynchronous logging test completed" << std::endl;
 }
 
-// 性能测试 - 比较同步和异步日志
+// Performance test - comparing synchronous and asynchronous logging
 void testPerformance() {
-    std::cout << "\n=== 性能测试：同步 vs 异步 ===" << std::endl;
+    std::cout << "\n=== Performance Test: Sync vs Async ===" << std::endl;
     
     const int LOG_COUNT = 10000;
     
     // 测试同步日志性能
     WinLog::getInstance().shutdown();
-    WinLog::getInstance().init();
+    WinLog::getInstance().init("async_log.log");
     
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < LOG_COUNT; ++i) {
-        WinLog::getInstance().info("同步日志测试 #{0}", i);
+        WinLog::getInstance().info("Sync logging test #{0}", i);
     }
     auto end = std::chrono::high_resolution_clock::now();
     auto syncDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -74,7 +76,7 @@ void testPerformance() {
     
     start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < LOG_COUNT; ++i) {
-        WinLog::getInstance().info("异步日志测试 #{0}", i);
+        WinLog::getInstance().info("Async logging test #{0}", i);
     }
     WinLog::getInstance().flush();
     end = std::chrono::high_resolution_clock::now();
@@ -86,16 +88,16 @@ void testPerformance() {
     // 计算性能提升
     if (syncDuration > 0) {
         double improvement = static_cast<double>(syncDuration) / asyncDuration;
-        std::cout << "性能提升: " << std::fixed << std::setprecision(2) 
-                  << improvement << "x" << std::endl;
+        std::cout << "Performance improvement: " << std::fixed << std::setprecision(2) 
+              << improvement << "x" << std::endl;
     }
     
     WinLog::getInstance().flush();
 }
 
-// 多线程测试
+// Multi-threaded test
 void testMultiThreadedLogging() {
-    std::cout << "\n=== 多线程日志测试 ===" << std::endl;
+    std::cout << "\n=== Multi-threaded Logging Test ===" << std::endl;
     
     WinLog::getInstance().shutdown();
     AsyncConfig multiThreadConfig;
@@ -113,7 +115,7 @@ void testMultiThreadedLogging() {
     
     auto threadFunc = [LOGS_PER_THREAD](int threadId) {
         for (int i = 0; i < LOGS_PER_THREAD; ++i) {
-            WinLog::getInstance().info("线程 #{0} 的日志 #{1}", threadId, i);
+            WinLog::getInstance().info("Thread #{0} log #{1}", threadId, i);
         }
     };
     
@@ -138,13 +140,13 @@ void testMultiThreadedLogging() {
     std::cout << NUM_THREADS << " 个线程同时写入 " << (NUM_THREADS * LOGS_PER_THREAD) 
               << " 条日志耗时: " << duration << " ms" << std::endl;
     
-    // 测试线程安全性（验证没有数据竞争）
-    std::cout << "多线程日志测试完成，验证线程安全性" << std::endl;
+    // Test thread safety (verify no data races)
+    std::cout << "Multi-threaded logging test completed, thread safety verified" << std::endl;
 }
 
-// 测试溢出策略
+// Test overflow strategy
 void testOverflowStrategy() {
-    std::cout << "\n=== 溢出策略测试 ===" << std::endl;
+    std::cout << "\n=== Overflow Strategy Test ===" << std::endl;
     
     // 配置小队列和丢弃策略
     AsyncConfig config;
@@ -157,24 +159,24 @@ void testOverflowStrategy() {
     WinLog::getInstance().setAsyncConfig(config);
     
     WinLog::getInstance().shutdown();
-    WinLog::getInstance().init(nullptr, LogLevel::info, config);
+    WinLog::getInstance().init("async_log.log", LogLevel::info, config);
     
     // 快速写入大量日志，触发溢出
     const int LOG_COUNT = 1000;
     for (int i = 0; i < LOG_COUNT; ++i) {
-        WinLog::getInstance().info("测试溢出策略的日志 #{0}", i);
+        WinLog::getInstance().info("Overflow strategy test log #{0}", i);
     }
     
     // 等待刷新完成
     std::this_thread::sleep_for(std::chrono::seconds(2));
     WinLog::getInstance().flush();
     
-    std::cout << "溢出策略测试完成，部分日志可能被丢弃" << std::endl;
+    std::cout << "Overflow strategy test completed, some logs may have been dropped" << std::endl;
 }
 
-// 测试配置参数
+// Test configuration parameters
 void testConfigParams() {
-    std::cout << "\n=== 配置参数测试 ===" << std::endl;
+    std::cout << "\n=== Configuration Parameters Test ===" << std::endl;
     
     // 测试不同的刷新间隔
     AsyncConfig config;
@@ -189,18 +191,18 @@ void testConfigParams() {
     WinLog::getInstance().shutdown();
     WinLog::getInstance().init(nullptr, LogLevel::info, config);
     
-    // 写入一些日志并验证快速刷新
+    // Write some logs and verify quick flushing
     for (int i = 0; i < 10; ++i) {
-        WinLog::getInstance().info("快速刷新测试日志 #{0}", i);
+        WinLog::getInstance().info("Quick flush test log #{0}", i);
     }
     
-    std::cout << "配置参数测试完成" << std::endl;
+    std::cout << "Configuration parameters test completed" << std::endl;
     WinLog::getInstance().flush();
 }
 
 int main() {
-    std::cout << "WinLog 异步日志功能测试" << std::endl;
-    std::cout << "=====================" << std::endl;
+    std::cout << "WinLog Asynchronous Logging Functionality Test" << std::endl;
+    std::cout << "=============================" << std::endl;
     
     // 设置日志级别
     WinLog::getInstance().setLevel(LogLevel::debug);
@@ -213,9 +215,9 @@ int main() {
         testOverflowStrategy();
         testConfigParams();
         
-        std::cout << "\n所有测试完成！" << std::endl;
+        std::cout << "\nAll tests completed!" << std::endl;
     } catch (const std::exception& e) {
-        std::cerr << "测试过程中出现异常: " << e.what() << std::endl;
+        std::cerr << "Exception occurred during testing: " << e.what() << std::endl;
     }
     
     // 确保所有日志都被处理
